@@ -1,0 +1,25 @@
+# Байт-код Python
+__pycache__/
+*.pyc
+
+# Файлы IDE
+.idea/
+.vscode/
+
+# Виртуальное окружение
+venv/
+env/
+
+# Файлы окружения
+.env
+
+# Docker
+docker-compose.override.yml
+
+# Медиа файлы
+media/
+
+generator.py
+.prettierrc
+.flake8
+pyproject.toml

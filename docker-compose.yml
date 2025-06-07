@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Сервис базы данных PostgreSQL
+  db:
+    image: postgres:15
+    container_name: retail_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Сервис Redis (для Celery)
+  redis:
+    image: redis:7.2-alpine
+    container_name: retail_redis
+    expose:
+      - "6379"
+
+  # Сервис RabbitMQ (брокер сообщений для Celery)
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: retail_rabbitmq
+    env_file:
+      - .env
+    ports:
+      - "15672:15672" # Веб-интерфейс для управления RabbitMQ
+      - "5672:5672"
+    depends_on:
+      - redis
+
+  # Сервис Backend (наше Django-приложение)
+  backend:
+    build: ./backend
+    container_name: retail_backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app # Синхронизирует код с контейнером
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy # Запускать только после успешного healthcheck'а БД
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
+  # Сервис для выполнения асинхронных задач Celery
+  celery:
+    build: ./backend
+    container_name: retail_celery
+    command: celery -A config worker -l INFO
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

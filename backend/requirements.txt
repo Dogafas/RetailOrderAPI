@@ -1,0 +1,13 @@
+# Django & DRF
+django==4.2.7
+djangorestframework==3.14.0
+
+# База данных PostgreSQL
+psycopg2-binary==2.9.9
+
+# Celery для асинхронных задач
+celery==5.3.6
+redis==5.0.1 # Клиент для Redis (используется как брокер и бэкенд для Celery)
+
+# Для работы с переменными окружения
+python-dotenv==1.0.0
