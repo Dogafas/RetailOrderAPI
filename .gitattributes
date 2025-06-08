@@ -1,0 +1,18 @@
+# Установить поведение по умолчанию для всех текстовых файлов
+* text=auto eol=lf
+
+# Явно указать, что эти файлы должны всегда иметь LF окончания строк
+*.py eol=lf
+*.json eol=lf
+*.txt eol=lf
+*.md eol=lf
+*.yml eol=lf
+*.yaml eol=lf
+*.dockerfile eol=lf
+
+# Указать, что эти файлы не являются текстовыми и их не нужно преобразовывать
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
