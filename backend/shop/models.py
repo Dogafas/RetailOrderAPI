@@ -171,6 +171,10 @@ class Cart(models.Model):
         Client, verbose_name="Клиент", on_delete=models.CASCADE, related_name="cart"
     )
 
+    class Meta:
+        verbose_name = "Корзина"
+        verbose_name_plural = "Корзины"
+
     def __str__(self):
         return f"Корзина клиента {self.client.user.email}"
 
