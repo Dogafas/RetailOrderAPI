@@ -23,3 +23,6 @@ generator.py
 .prettierrc
 .flake8
 pyproject.toml
+
+# Базы данных
+db.sqlite3
