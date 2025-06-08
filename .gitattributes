@@ -1,16 +1,23 @@
-# Установить поведение по умолчанию для всех текстовых файлов
+# Установить поведение по умолчанию для всех файлов
 * text=auto eol=lf
 
-# Явно указать, что эти файлы должны всегда иметь LF окончания строк
-*.py eol=lf
-*.json eol=lf
-*.txt eol=lf
-*.md eol=lf
-*.yml eol=lf
-*.yaml eol=lf
-*.dockerfile eol=lf
+# Явно указать, что эти файлы являются текстовыми, и принудительно
+# использовать для них окончания строк LF (Linux-style)
+# Это особенно важно для кросс-платформенной разработки
+*.py text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.gitignore text eol=lf
+.dockerignore text eol=lf
+Dockerfile text eol=lf
 
-# Указать, что эти файлы не являются текстовыми и их не нужно преобразовывать
+# Для shell-скриптов это критически важно, так как CRLF их сломает
+*.sh text eol=lf
+
+# Явно указать, что эти файлы являются бинарными и их нельзя изменять
 *.png binary
 *.jpg binary
 *.jpeg binary
