@@ -36,24 +36,32 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 
     def validate(self, data):
         """
-        Проверяем, что для поставщика указано название компании.
+        Проверяем, что для поставщика указано название компании,
+        и убираем кастомные поля перед передачей в родительский валидатор.
         """
+
         if data.get("user_type") == User.UserType.SUPPLIER and not data.get(
             "company_name"
         ):
             raise serializers.ValidationError(
                 "Для типа пользователя 'Поставщик' необходимо указать 'company_name'."
             )
-        # Вызываем родительский метод валидации
-        return super().validate(data)
+
+        self.context["user_type"] = data.pop("user_type")
+        self.context["company_name"] = data.pop("company_name", None)
+
+        validated_data = super().validate(data)
+
+        return validated_data
 
     def create(self, validated_data):
         """
         Переопределяем метод для создания пользователя и связанного профиля.
+        Данные для профиля берутся из self.context, куда мы их положили на этапе валидации.
         """
-        # Извлекаем кастомные поля, чтобы они не попали в User.objects.create_user
-        user_type = validated_data.pop("user_type")
-        company_name = validated_data.pop("company_name", None)
+
+        user_type = self.context.get("user_type")
+        company_name = self.context.get("company_name")
 
         # Создаем пользователя с помощью родительского метода Djoser
         user = super().create(validated_data)
