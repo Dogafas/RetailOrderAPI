@@ -13,7 +13,7 @@ urlpatterns = [
     # Мы размещаем их под общим префиксом /api/v1/auth/.
     path("api/v1/auth/", include("djoser.urls")),
     path("api/v1/auth/", include("djoser.urls.authtoken")),
-    # В будущем здесь появятся эндпоинты для магазина.
-    # Например:
-    # path('api/v1/', include('shop.urls')),
+    # Эндпоинты для магазина.
+    
+    path('api/v1/', include('shop.urls')),
 ]
