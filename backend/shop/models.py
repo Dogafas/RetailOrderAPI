@@ -41,7 +41,7 @@ class ProductInfo(models.Model):
     Информация о товаре от конкретного поставщика.
     Содержит цену, количество и уникальные параметры.
     """
-
+    external_id = models.PositiveIntegerField(verbose_name='Внешний ID')
     product = models.ForeignKey(
         Product,
         verbose_name="Товар",
@@ -61,7 +61,7 @@ class ProductInfo(models.Model):
         verbose_name = "Информация о товаре от поставщика"
         verbose_name_plural = "Информация о товарах от поставщиков"
         # Гарантируем, что для одного товара у одного поставщика есть только одна запись
-        unique_together = ("product", "supplier")
+        unique_together = ("supplier", "external_id")
 
     def __str__(self):
         return f"{self.product.name} от {self.supplier.name}"
