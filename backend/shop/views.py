@@ -25,7 +25,7 @@ class SupplierStatusView(RetrieveUpdateAPIView):
         # Проверяем, является ли пользователь поставщиком
         if self.request.user.user_type != 'supplier':
             return None
-        
+
         # Получаем или создаем профиль поставщика
         supplier, _ = Supplier.objects.get_or_create(user=self.request.user)
         return supplier
@@ -50,7 +50,7 @@ class PriceListUploadView(APIView):
                 {'error': 'Только поставщики могут загружать прайс-листы.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
         # Проверяем, был ли файл отправлен
         file_obj = request.FILES.get('file')
         if not file_obj:
@@ -58,13 +58,13 @@ class PriceListUploadView(APIView):
                 {'error': 'Файл не был предоставлен.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Читаем содержимое файла
         data = file_obj.read().decode('utf-8')
-        
+
         # Запускаем асинхронную задачу Celery
         process_pricelist_upload.delay(data, request.user.id)
-        
+
         # Возвращаем ответ, что задача принята в обработку
         return Response(
             {'message': 'Ваш прайс-лист был принят в обработку.'},

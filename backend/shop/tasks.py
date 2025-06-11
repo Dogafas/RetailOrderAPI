@@ -10,7 +10,7 @@ from .models import Category, Product, ProductInfo, Parameter, ProductParameter
 def process_pricelist_upload(data, user_id):
     """
     Асинхронная задача для обработки загруженного прайс-листа.
-    
+
     Args:
         data (str): Содержимое YAML-файла в виде строки.
         user_id (int): ID пользователя (поставщика), загрузившего файл.
@@ -18,10 +18,10 @@ def process_pricelist_upload(data, user_id):
     try:
         user = User.objects.get(id=user_id)
         supplier = user.supplier_profile
-        
+
         # Загружаем данные из YAML
         content = yaml.safe_load(data)
-        
+
         # Используем транзакцию, чтобы гарантировать целостность данных.
         # Если на любом этапе произойдет ошибка, все изменения откатятся.
         with transaction.atomic():
@@ -31,7 +31,7 @@ def process_pricelist_upload(data, user_id):
                     id=category_data['id'],
                     defaults={'name': category_data['name']}
                 )
-            
+
             # 2. Очищаем старые товары этого поставщика
             # Это гарантирует, что товары, которых нет в новом файле, будут удалены.
             ProductInfo.objects.filter(supplier=supplier).delete()
@@ -63,20 +63,20 @@ def process_pricelist_upload(data, user_id):
                     parameter, _ = Parameter.objects.get_or_create(
                         name=param_name
                     )
-                    
+
                     # Создаем значение параметра для товара
                     ProductParameter.objects.create(
                         product_info=product_info,
                         parameter=parameter,
                         value=param_value
                     )
-            
+
             # Обновляем название магазина (поставщика)
             supplier.name = content.get('shop', supplier.name)
             supplier.save()
 
         return f"Прайс-лист для {supplier.name} успешно обработан."
-    
+
     except yaml.YAMLError as e:
         # Логируем ошибку парсинга YAML
         print(f"Ошибка парсинга YAML для пользователя {user_id}: {e}")

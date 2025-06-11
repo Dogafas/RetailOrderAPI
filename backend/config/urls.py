@@ -14,6 +14,6 @@ urlpatterns = [
     path("api/v1/auth/", include("djoser.urls")),
     path("api/v1/auth/", include("djoser.urls.authtoken")),
     # Эндпоинты для магазина.
-    
+
     path('api/v1/', include('shop.urls')),
 ]
