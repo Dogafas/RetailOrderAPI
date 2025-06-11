@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "djoser",
+    "django_filters",
     "users.apps.UsersConfig",
     "shop.apps.ShopConfig",
 ]
@@ -100,7 +101,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ... (CELERY SETTINGS остаются без изменений)
+# CELERY SETTINGS
 CELERY_BROKER_URL = (
     f"amqp://{os.getenv('RABBITMQ_DEFAULT_USER')}:"
     f"{os.getenv('RABBITMQ_DEFAULT_PASS')}@rabbitmq:5672/"
@@ -124,6 +125,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # использовать django-filter по умолчанию
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+
+    # пагинация по умолчанию для всех ViewSet
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,  # Количество элементов на странице
 }
 
 

@@ -28,3 +28,6 @@ pyproject.toml
 db.sqlite3
 practice_commits.md
 notes.txt
+
+# Игнорировать тестовые YAML файлы
+*.yaml

@@ -9,6 +9,13 @@ from .serializers import SupplierStatusSerializer
 from .tasks import process_pricelist_upload
 from users.models import Supplier
 
+from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.permissions import AllowAny # Разрешим просмотр всем
+from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Product
+from .serializers import ProductSerializer
+from .filters import ProductFilter
 
 class SupplierStatusView(RetrieveUpdateAPIView):
     """
@@ -70,3 +77,35 @@ class PriceListUploadView(APIView):
             {'message': 'Ваш прайс-лист был принят в обработку.'},
             status=status.HTTP_202_ACCEPTED
         )
+
+
+
+class ProductViewSet(ReadOnlyModelViewSet):
+    """
+    ViewSet для просмотра каталога товаров.
+
+    Поддерживает:
+    - Фильтрацию по ID категории: /api/v1/products/?category=ID
+    - Поиск по названию товара: /api/v1/products/?search=...
+    - Пагинацию.
+    """
+    # queryset - это базовый набор данных
+    queryset = Product.objects.all().prefetch_related(
+        'product_infos__supplier',
+        'product_infos__parameters__parameter'
+    )
+
+
+    serializer_class = ProductSerializer
+
+    # Разрешаем просмотр каталога всем пользователям, даже неавторизованным
+    permission_classes = [AllowAny]
+
+    # Подключаем бэкенды для фильтрации и поиска
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+
+    # Указываем класс фильтра, который мы создали
+    filterset_class = ProductFilter
+
+    # Указываем поля, по которым будет работать SearchFilter
+    search_fields = ['name']
