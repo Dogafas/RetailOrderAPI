@@ -146,3 +146,22 @@ DJOSER = {
         "current_user": "users.serializers.CustomUserSerializer",
     },
 }
+
+
+
+
+# EMAIL SETTINGS
+if DEBUG:
+    # В режиме разработки выводим письма в консоль, где запущен Django
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # В продакшене используется реальный SMTP-сервер
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST')
+    EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+
+# Email администратора, берется из .env
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'default-admin@example.com')

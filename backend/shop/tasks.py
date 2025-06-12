@@ -3,7 +3,12 @@ from celery import shared_task
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from users.models import User
-from .models import Category, Product, ProductInfo, Parameter, ProductParameter
+from .models import Category, Product, ProductInfo, Parameter, ProductParameter, Order
+from django.core.mail import send_mail
+from django.conf import settings
+
+
+
 
 
 @shared_task(name="shop.tasks.process_pricelist_upload")
@@ -109,3 +114,69 @@ def process_pricelist_upload(data, user_id):
         # и возвращаем общее сообщение. Детали пишем в лог.
         print(f"Непредвиденная ошибка при обработке прайс-листа для {user_id}: {e}")
         return f"Ошибка: не удалось обработать файл."
+    
+
+
+
+
+@shared_task
+def send_order_confirmation_email(order_id, user_email):
+    """
+    Асинхронная задача для отправки email-подтверждения заказа клиенту.
+    """
+    try:
+        order = Order.objects.get(id=order_id)
+        subject = f'Подтверждение заказа №{order.id}'
+        message = (
+            f'Уважаемый клиент,\n\n'
+            f'Ваш заказ №{order.id} от {order.created_at.strftime("%d.%m.%Y %H:%M")} успешно принят в обработку.\n'
+            f'Вы можете отслеживать его статус в личном кабинете.'
+        )
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,  # От кого
+            [user_email],             # Кому
+            fail_silently=False,
+        )
+        return f"Письмо о заказе №{order_id} успешно отправлено клиенту {user_email}."
+    except Order.DoesNotExist:
+        return f"Ошибка: Заказ №{order_id} не найден."
+    except Exception as e:
+        return f"Ошибка при отправке письма для заказа №{order_id}: {e}"
+
+
+@shared_task
+def send_new_order_notification_to_admin(order_id):
+    """
+    Асинхронная задача для отправки уведомления о новом заказе администратору.
+    """
+    try:
+        order = Order.objects.get(id=order_id)
+        subject = f'Новый заказ №{order.id}'
+        
+        # Собираем информацию о заказе для письма
+        items_details = "\n".join(
+            [f'- {item.product_info.product.name}: {item.quantity} шт. по {item.price_per_item} руб.' 
+             for item in order.items.all()]
+        )
+        
+        message = (
+            f'Поступил новый заказ №{order.id}.\n\n'
+            f'Клиент: {order.client.user.first_name} {order.client.user.last_name} ({order.client.user.email})\n'
+            f'Контакт для доставки: {order.contact}\n\n'
+            f'Состав заказа:\n{items_details}\n'
+        )
+        
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,       # От кого
+            [settings.ADMIN_EMAIL],         # Кому (берем из настроек)
+            fail_silently=False,
+        )
+        return f"Уведомление о заказе №{order_id} успешно отправлено администратору."
+    except Order.DoesNotExist:
+        return f"Ошибка: Заказ №{order_id} для уведомления не найден."
+    except Exception as e:
+        return f"Ошибка при отправке уведомления администратору для заказа №{order_id}: {e}"    

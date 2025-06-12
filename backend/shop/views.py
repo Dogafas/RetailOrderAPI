@@ -1,7 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.generics import RetrieveUpdateAPIView, CreateAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -10,15 +10,18 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 
 from users.models import Supplier
 from .filters import ProductFilter
-from .models import Cart, CartItem, Product
+from .models import Cart, CartItem, Product, Contact
 from .permissions import IsClient
 from .serializers import (
     SupplierStatusSerializer,
     ProductSerializer,
     CartSerializer,
     CartItemWriteSerializer,
+    OrderSerializer, 
+    ContactSerializer
 )
 from .tasks import process_pricelist_upload
+
 
 
 class SupplierStatusView(RetrieveUpdateAPIView):
@@ -116,3 +119,27 @@ class CartViewSet(ModelViewSet):
         )
         serializer = self.get_serializer(cart)
         return Response(serializer.data)
+    
+
+class OrderCreateView(CreateAPIView):
+    """
+    View для создания заказа.
+    """
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated, IsClient] # Только для клиентов 
+
+
+class ContactViewSet(ModelViewSet):
+    """
+    ViewSet для управления контактами (адресами) клиента.
+    """
+    serializer_class = ContactSerializer
+    permission_classes = [IsAuthenticated, IsClient]
+
+    def get_queryset(self):
+        """Возвращает только контакты текущего пользователя."""
+        return Contact.objects.filter(client__user=self.request.user)
+
+    def perform_create(self, serializer):
+        """Автоматически привязывает контакт к профилю клиента."""
+        serializer.save(client=self.request.user.client_profile)    
