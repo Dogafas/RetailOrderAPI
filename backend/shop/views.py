@@ -21,6 +21,7 @@ from .serializers import (
     ContactSerializer
 )
 from .tasks import process_pricelist_upload
+from .permissions import IsClient, IsSupplier 
 
 
 
@@ -29,11 +30,12 @@ class SupplierStatusView(RetrieveUpdateAPIView):
     View для управления статусом поставщика (принимает ли он заказы).
     """
     serializer_class = SupplierStatusSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSupplier]
 
     def get_object(self):
-        if self.request.user.user_type != 'supplier':
-            return None
+        """
+        Возвращает профиль поставщика для текущего пользователя.
+        """
         supplier, _ = Supplier.objects.get_or_create(user=self.request.user)
         return supplier
 
@@ -42,15 +44,11 @@ class PriceListUploadView(APIView):
     """
     View для загрузки прайс-листа поставщиком.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSupplier]
     parser_classes = [MultiPartParser]
 
     def post(self, request, *args, **kwargs):
-        if request.user.user_type != 'supplier':
-            return Response(
-                {'error': 'Только поставщики могут загружать прайс-листы.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response(

@@ -14,3 +14,11 @@ class IsClient(BasePermission):
         
         # Проверяем, что тип пользователя - 'client'
         return request.user.user_type == 'client'
+
+class IsSupplier(BasePermission):
+    """
+    Разрешает доступ только пользователям с типом 'supplier'.
+    """
+    def has_permission(self, request, view):
+        # Проверяем, что пользователь аутентифицирован и является поставщиком
+        return request.user.is_authenticated and request.user.user_type == 'supplier'    
