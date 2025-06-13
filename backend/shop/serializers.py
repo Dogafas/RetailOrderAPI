@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from django.db import transaction
 from users.models import Supplier
 from .models import Product, ProductInfo, ProductParameter, Parameter, Category
@@ -59,21 +60,6 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'category', 'product_infos')
 
 
-
-class CartItemWriteSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для добавления/изменения товаров в корзине (для записи).
-    """
-    # product_info указывается только по ID.
-    product_info = serializers.PrimaryKeyRelatedField(
-        queryset=ProductInfo.objects.all()
-    )
-
-    class Meta:
-        model = CartItem
-        fields = ('product_info', 'quantity')
-
-
 class CartItemSerializer(serializers.ModelSerializer):
     """
     Сериализатор для отображения позиций в корзине (для чтения).
@@ -115,7 +101,8 @@ class CartSerializer(serializers.ModelSerializer):
     def get_total_sum(self, obj):
         """Вычисляет общую сумму всех позиций в корзине."""
         return sum(item.product_info.price * item.quantity for item in obj.items.all())
-    
+
+
 class OrderSerializer(serializers.ModelSerializer):
     """
     Сериализатор для оформления и отображения заказа.
@@ -195,6 +182,7 @@ class OrderSerializer(serializers.ModelSerializer):
             
             return order
 
+
 class ContactSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели Contact.
@@ -239,4 +227,39 @@ class ContactSerializer(serializers.ModelSerializer):
             )
             
         return data
-    
+
+
+class CartItemWriteSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для добавления/изменения товаров в корзине (для записи).
+    """
+    product_info = serializers.IntegerField(write_only=True, source='product_info_id')
+
+    class Meta:
+        model = CartItem
+        fields = ('product_info', 'quantity')
+
+    def validate(self, data):
+        """
+        Общая валидация данных.
+        """
+        product_info_id = data.get('product_info_id')
+        
+        try:
+            # Пытаемся найти объект ProductInfo по ID
+            product_info = ProductInfo.objects.get(id=product_info_id)
+        except ProductInfo.DoesNotExist:
+            # Если не найден, генерируем кастомную ошибку
+            raise ValidationError({'product_info': ['Товар с указанным ID не найден.']})
+        
+        # Проверяем, что поставщик активен
+        if not product_info.supplier.is_active:
+            raise ValidationError(
+                {'product_info': ['Товары от данного поставщика временно недоступны для заказа.']}
+            )
+                
+        # Метод `create` ожидает ключ 'product_info'.
+        data['product_info'] = product_info
+        
+        return data
+
