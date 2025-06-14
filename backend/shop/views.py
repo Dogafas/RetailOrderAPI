@@ -27,7 +27,11 @@ from .permissions import IsClient, IsSupplier
 
 class SupplierStatusView(RetrieveUpdateAPIView):
     """
-    View для управления статусом поставщика (принимает ли он заказы).
+    Получение и изменение статуса поставщика.
+    
+    Позволяет поставщику управлять своей готовностью принимать заказы.
+    - GET: получить текущий статус.
+    - PATCH/PUT: изменить статус.
     """
     serializer_class = SupplierStatusSerializer
     permission_classes = [IsSupplier]
@@ -42,7 +46,10 @@ class SupplierStatusView(RetrieveUpdateAPIView):
 
 class PriceListUploadView(APIView):
     """
-    View для загрузки прайс-листа поставщиком.
+    Загрузка прайс-листа поставщика.
+    
+    Принимает POST-запрос с файлом в формате YAML.
+    Ключ для файла в form-data должен быть `file`.
     """
     permission_classes = [IsSupplier]
     parser_classes = [MultiPartParser]
@@ -65,7 +72,10 @@ class PriceListUploadView(APIView):
 
 class ProductViewSet(ReadOnlyModelViewSet):
     """
-    ViewSet для просмотра каталога товаров.
+    Просмотр каталога товаров.
+    
+    Предоставляет доступ к списку товаров с фильтрацией и поиском.
+    Доступно всем пользователям, включая неавторизованных.
     """
     queryset = Product.objects.all().prefetch_related(
         'product_infos__supplier', 'product_infos__parameters__parameter'
@@ -79,7 +89,14 @@ class ProductViewSet(ReadOnlyModelViewSet):
 
 class CartViewSet(ModelViewSet):
     """
-    ViewSet для управления корзиной пользователя.
+    Управление корзиной клиента.
+    
+    Позволяет добавлять, просматривать, изменять и удалять товары в корзине.
+    Доступно только для аутентифицированных клиентов.
+    - GET (/api/v1/cart/): просмотр корзины.
+    - POST (/api/v1/cart/): добавление товара (требует product_info и quantity).
+    - PATCH (/api/v1/cart/{item_id}/): изменение количества товара.
+    - DELETE (/api/v1/cart/{item_id}/): удаление товара из корзины.
     """
     permission_classes = [IsAuthenticated, IsClient]
 
@@ -121,7 +138,11 @@ class CartViewSet(ModelViewSet):
 
 class OrderCreateView(CreateAPIView):
     """
-    View для создания заказа.
+    Оформление заказа.
+    
+    Создает новый заказ на основе текущего содержимого корзины клиента.
+    Требует указания ID контакта для доставки.
+    После успешного создания корзина очищается.
     """
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsClient] # Только для клиентов 
@@ -129,7 +150,10 @@ class OrderCreateView(CreateAPIView):
 
 class ContactViewSet(ModelViewSet):
     """
-    ViewSet для управления контактами (адресами) клиента.
+    Управление контактными данными (адресами) клиента.
+    
+    Позволяет клиенту создавать, просматривать, изменять и удалять свои
+    контактные данные для последующего использования в заказах.
     """
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated, IsClient]

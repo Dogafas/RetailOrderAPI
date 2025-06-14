@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "djoser",
     "django_filters",
+    'drf_spectacular',
     "users.apps.UsersConfig",
     "shop.apps.ShopConfig",
 ]
@@ -133,6 +134,8 @@ REST_FRAMEWORK = {
     # пагинация по умолчанию для всех ViewSet
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,  # Количество элементов на странице
+
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 
@@ -165,3 +168,13 @@ else:
 
 # Email администратора, берется из .env
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'default-admin@example.com')
+
+
+# DRF-SPECTACULAR SETTINGS (API DOCS)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Retail Order API',
+    'DESCRIPTION': 'API для сервиса заказа товаров для розничных сетей.',
+    'VERSION': '1.0.0',
+    # Не встраивать схему в саму страницу, а обслуживать ее отдельно
+    'SERVE_INCLUDE_SCHEMA': False,
+}
