@@ -7,7 +7,7 @@ from .models import Cart, CartItem, ProductInfo
 
 from users.models import Contact
 from .models import Order, OrderItem
-from .tasks import send_order_confirmation_email, send_new_order_notification_to_admin
+
 
 class SupplierStatusSerializer(serializers.ModelSerializer):
     """
@@ -150,6 +150,7 @@ class OrderSerializer(serializers.ModelSerializer):
         """
         Создаем заказ, переносим товары из корзины и запускаем задачи.
         """
+        from .tasks import send_order_confirmation_email, send_new_order_notification_to_admin
         request = self.context['request']
         user = request.user
         cart = user.client_profile.cart

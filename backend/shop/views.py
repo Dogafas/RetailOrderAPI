@@ -1,4 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import JsonResponse, HttpResponse
 from rest_framework import status
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import RetrieveUpdateAPIView, CreateAPIView
@@ -7,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
+from celery.result import AsyncResult
 
 from users.models import Supplier
 from .filters import ProductFilter
@@ -20,8 +22,7 @@ from .serializers import (
     OrderSerializer, 
     ContactSerializer
 )
-from .tasks import process_pricelist_upload
-from .permissions import IsClient, IsSupplier 
+from .permissions import IsClient, IsSupplier, IsAdminOrSupplier 
 
 
 
@@ -55,7 +56,8 @@ class PriceListUploadView(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request, *args, **kwargs):
-
+        from .tasks import process_pricelist_upload
+        process_pricelist_upload.delay(data, request.user.id)
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response(
@@ -165,3 +167,62 @@ class ContactViewSet(ModelViewSet):
     def perform_create(self, serializer):
         """Автоматически привязывает контакт к профилю клиента."""
         serializer.save(client=self.request.user.client_profile)    
+
+
+class ProductExportView(APIView):
+    """
+    Запускает асинхронную задачу по экспорту товаров в JSON.
+    """
+    # Допустим, экспорт доступен только администраторам или поставщикам.
+
+    permission_classes = [IsAdminOrSupplier] 
+
+    def get(self, request, *args, **kwargs):
+        """
+        Запускает задачу и возвращает ее ID.
+        """
+        from .api_tasks import export_products_to_json
+
+        task = export_products_to_json.delay()
+        return Response(
+            {'task_id': task.id},
+            status=status.HTTP_202_ACCEPTED
+        )
+
+
+class TaskStatusView(APIView):
+    """
+    Проверяет статус асинхронной задачи и возвращает результат.
+    """
+    permission_classes = [IsAdminOrSupplier]
+
+    def get(self, request, task_id, *args, **kwargs):
+        """
+        Возвращает статус задачи и ее результат (если готов).
+        """
+        # Получаем объект задачи по ее ID
+        task_result = AsyncResult(task_id)
+        
+        response_data = {
+            'task_id': task_id,
+            'status': task_result.status,
+            'result': None
+        }
+
+        if task_result.successful():
+            # Если задача успешно выполнена, возвращаем результат как JSON-файл
+            json_data = task_result.get()
+            # Создаем HTTP-ответ с JSON-данными и нужными заголовками
+            response = HttpResponse(
+                json_data, 
+                content_type='application/json; charset=utf-8'
+            )
+            response['Content-Disposition'] = 'attachment; filename="products.json"'
+            return response
+        elif task_result.failed():
+            # Если задача провалилась, возвращаем информацию об ошибке
+            response_data['result'] = str(task_result.info) # .info содержит traceback
+            return JsonResponse(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            # Если задача еще выполняется, просто возвращаем ее статус
+            return JsonResponse(response_data, status=status.HTTP_200_OK)

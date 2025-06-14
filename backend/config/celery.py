@@ -16,4 +16,5 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Автоматически находить и регистрировать асинхронные задачи
 # из всех файлов tasks.py в установленных приложениях Django.
+app.autodiscover_tasks(related_name='api_tasks')
 app.autodiscover_tasks()
