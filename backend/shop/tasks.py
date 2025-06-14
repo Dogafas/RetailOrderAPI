@@ -180,3 +180,32 @@ def send_new_order_notification_to_admin(order_id):
         return f"Ошибка: Заказ №{order_id} для уведомления не найден."
     except Exception as e:
         return f"Ошибка при отправке уведомления администратору для заказа №{order_id}: {e}"    
+
+
+@shared_task
+def send_status_change_email(order_id, user_email, new_status):
+    """
+    Асинхронная задача для отправки email об изменении статуса заказа.
+    """
+    try:
+        # Получаем русское название статуса из модели Order
+        status_display = dict(Order.OrderStatus.choices).get(new_status)
+        if not status_display:
+            status_display = new_status # На случай, если что-то пойдет не так
+
+        subject = f'Статус вашего заказа №{order_id} изменился'
+        message = (
+            f'Уважаемый клиент,\n\n'
+            f'Статус вашего заказа №{order_id} был изменен на: "{status_display}".\n\n'
+            f'Спасибо, что выбрали нас!'
+        )
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,
+            [user_email],
+            fail_silently=False,
+        )
+        return f"Письмо о смене статуса заказа №{order_id} успешно отправлено клиенту {user_email}."
+    except Exception as e:
+        return f"Ошибка при отправке письма о смене статуса для заказа №{order_id}: {e}"
