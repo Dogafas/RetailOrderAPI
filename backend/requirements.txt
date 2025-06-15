@@ -23,3 +23,6 @@ django-filter==23.5
 
 # библиотека для документации 
 drf-spectacular==0.27.2
+
+# библиотека для JWT (токенов)
+djangorestframework-simplejwt==5.3.1

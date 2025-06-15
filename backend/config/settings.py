@@ -28,7 +28,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "rest_framework.authtoken",
     "djoser",
     "django_filters",
     'drf_spectacular',
@@ -121,7 +120,7 @@ AUTH_USER_MODEL = "users.User"
 # DJANGO REST FRAMEWORK SETTINGS
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -177,4 +176,40 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     # Не встраивать схему в саму страницу, а обслуживать ее отдельно
     'SERVE_INCLUDE_SCHEMA': False,
+}
+
+
+# SIMPLE JWT SETTINGS
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # Время жизни access-токена (короткое)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    # Время жизни refresh-токена (длинное)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    
+    # Разрешает обновлять refresh-токены
+    'ROTATE_REFRESH_TOKENS': True,
+    # Если True, то после обновления refresh-токена старый будет добавлен в черный список
+    'BLACKLIST_AFTER_ROTATION': True,
+
+    # Алгоритм подписи
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY, # Используем секретный ключ Django
+
+    # Тип токена в заголовке Authorization
+    'AUTH_HEADER_TYPES': ('Bearer',), # Стандарт для JWT - 'Bearer'
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    
+    # Поле в модели пользователя, которое будет использоваться как идентификатор
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    
+    # Класс для аутентификации пользователя
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    
+    # Тип токена
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
