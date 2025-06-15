@@ -57,20 +57,22 @@ class PriceListUploadView(APIView):
 
     def post(self, request, *args, **kwargs):
         from .tasks import process_pricelist_upload
-        process_pricelist_upload.delay(data, request.user.id)
+
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response(
                 {'error': 'Файл не был предоставлен.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         data = file_obj.read().decode('utf-8')
+
         process_pricelist_upload.delay(data, request.user.id)
+
         return Response(
             {'message': 'Ваш прайс-лист был принят в обработку.'},
             status=status.HTTP_202_ACCEPTED,
         )
-
 
 class ProductViewSet(ReadOnlyModelViewSet):
     """
