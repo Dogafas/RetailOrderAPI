@@ -1,28 +1,27 @@
-from django_filters.rest_framework import DjangoFilterBackend
+from celery.result import AsyncResult
 from django.http import JsonResponse, HttpResponse
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import RetrieveUpdateAPIView, CreateAPIView
+from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
 from rest_framework.parsers import MultiPartParser
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
-from celery.result import AsyncResult
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from users.models import Supplier
 from .filters import ProductFilter
-from .models import Cart, CartItem, Product, Contact
-from .permissions import IsClient
+from .models import Cart, CartItem, Contact, Order, Product
+from .permissions import IsAdminOrSupplier, IsClient, IsSupplier
 from .serializers import (
-    SupplierStatusSerializer,
-    ProductSerializer,
-    CartSerializer,
     CartItemWriteSerializer,
-    OrderSerializer, 
-    ContactSerializer
+    CartSerializer,
+    ContactSerializer,
+    OrderSerializer,
+    ProductSerializer,
+    SupplierStatusSerializer,
 )
-from .permissions import IsClient, IsSupplier, IsAdminOrSupplier 
 
 
 
@@ -228,3 +227,28 @@ class TaskStatusView(APIView):
         else:
             # Если задача еще выполняется, просто возвращаем ее статус
             return JsonResponse(response_data, status=status.HTTP_200_OK)
+        
+
+class OrderViewSet(ReadOnlyModelViewSet):
+    """
+    ViewSet для просмотра заказов клиента.
+    
+    Позволяет клиенту просматривать список своих заказов и детали
+    каждого конкретного заказа.
+    - GET /api/v1/orders/ - список заказов.
+    - GET /api/v1/orders/{id}/ - детали заказа.
+    """
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated, IsClient] # Только для клиентов
+
+    def get_queryset(self):
+        """
+        Возвращает только заказы текущего пользователя.
+        Используем prefetch_related для оптимизации запросов к позициям заказа.
+        """
+        return Order.objects.filter(
+            client__user=self.request.user
+        ).prefetch_related(
+            'items',
+            'items__product_info__product'
+        )

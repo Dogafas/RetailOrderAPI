@@ -103,11 +103,25 @@ class CartSerializer(serializers.ModelSerializer):
         return sum(item.product_info.price * item.quantity for item in obj.items.all())
 
 
+class OrderItemSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для отображения позиций в заказе.
+    """
+    # Предоставляем подробную информацию о товаре
+    name = serializers.CharField(source='product_info.product.name', read_only=True)
+    
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'name', 'quantity', 'price_per_item')
+
+
 class OrderSerializer(serializers.ModelSerializer):
     """
     Сериализатор для оформления и отображения заказа.
     """
-    
+    items = OrderItemSerializer(many=True, read_only=True)
+    # Вычисляемое поле для общей суммы
+    total_sum = serializers.SerializerMethodField()
     # Принимает ID контакта при создании заказа. Не отображается в ответе.
     contact_id = serializers.PrimaryKeyRelatedField(
         queryset=Contact.objects.none(),
@@ -121,8 +135,14 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('id', 'contact', 'contact_id', 'created_at', 'status')
-        read_only_fields = ('id', 'created_at', 'status')
+        fields = ('id', 'contact', 'contact_id', 'created_at', 'status', 'items', 'total_sum')
+        read_only_fields = ('id', 'created_at', 'status', 'items', 'total_sum')
+    
+    def get_total_sum(self, obj):
+        """
+        Вычисляет общую сумму заказа.
+        """
+        return sum(item.quantity * item.price_per_item for item in obj.items.all())
 
     def __init__(self, *args, **kwargs):
         """
