@@ -26,3 +26,6 @@ drf-spectacular==0.27.2
 
 # библиотека для JWT (токенов)
 djangorestframework-simplejwt==5.3.1
+
+# библиотека для отправки писем через gjoser
+django-templated-mail==1.1.1

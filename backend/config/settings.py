@@ -143,14 +143,21 @@ DJOSER = {
     "PASSWORD_RESET_CONFIRM_URL": "auth/password/reset/confirm/{uid}/{token}",
     "ACTIVATION_URL": "auth/activate/{uid}/{token}",
     "LOGIN_FIELD": "email",
+    # Включаем отправку письма для активации
+    'SEND_ACTIVATION_EMAIL': True,
+    # Говорим Djoser НЕ активировать пользователя сразу после регистрации
+    'ACTIVATE_USER_AFTER_REGISTRATION': False,
     "SERIALIZERS": {
         "user_create": "users.serializers.CustomUserCreateSerializer",
         "current_user": "users.serializers.CustomUserSerializer",
     },
+    'EMAIL': {
+        # Указываем Djoser использовать наши кастомные классы
+        'activation': 'users.services.CustomActivationEmail',
+        'password_reset': 'users.services.CustomPasswordResetEmail',
+        # 'confirmation': 'djoser.email.ConfirmationEmail', # Ещё можно добавить письмо с об успешной регистрации 
 }
-
-
-
+}
 
 # EMAIL SETTINGS
 if DEBUG:
