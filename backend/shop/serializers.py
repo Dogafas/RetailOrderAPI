@@ -120,72 +120,69 @@ class OrderSerializer(serializers.ModelSerializer):
     Сериализатор для оформления и отображения заказа.
     """
     items = OrderItemSerializer(many=True, read_only=True)
-    # Вычисляемое поле для общей суммы
     total_sum = serializers.SerializerMethodField()
-    # Принимает ID контакта при создании заказа. Не отображается в ответе.
-    contact_id = serializers.PrimaryKeyRelatedField(
-        queryset=Contact.objects.none(),
-        write_only=True,
-        source='contact'  # Указываем, что это поле работает с модельным полем 'contact'
-    )
     
+    # Это поле будет только принимать ID от пользователя.
+    contact_id = serializers.IntegerField(write_only=True)
     
-    # Отображает ID контакта в ответе. Не используется для записи.
+    # Это поле для красивого отображения ID в ответе.
     contact = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Order
         fields = ('id', 'contact', 'contact_id', 'created_at', 'status', 'items', 'total_sum')
         read_only_fields = ('id', 'created_at', 'status', 'items', 'total_sum')
-    
+
     def get_total_sum(self, obj):
         """
         Вычисляет общую сумму заказа.
         """
         return sum(item.quantity * item.price_per_item for item in obj.items.all())
 
-    def __init__(self, *args, **kwargs):
-        """
-        Динамически задаем queryset для поля ЗАПИСИ.
-        """
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            self.fields['contact_id'].queryset = Contact.objects.filter(
-                client__user=request.user
-            )
-
-    
     def validate(self, data):
         """
-        Проверяем, что корзина не пуста.
+        Проверяем, что корзина не пуста и контакт существует.
         """
         cart = self.context['request'].user.client_profile.cart
         if not cart.items.exists():
-            raise serializers.ValidationError("Нельзя оформить заказ с пустой корзиной.")
+            raise serializers.ValidationError("Нельзя оформить заказ с пустой корзиной.")        
+        
+        contact_id = data.get('contact_id')
+        request = self.context['request']
+        
+        try:
+            # Ищем контакт по ID И проверяем, что он принадлежит текущему пользователю.
+            # Это важный шаг для безопасности.
+            contact = Contact.objects.get(id=contact_id, client__user=request.user)
+        except Contact.DoesNotExist:
+            # Если не найден - генерируем наше кастомное сообщение.
+            raise ValidationError({'contact_id': ['Указанный контакт не найден или не принадлежит вам.']})
+        
+        # Если контакт найден, добавляем его в валидированные данные под ключом 'contact'.
+        # Это нужно, чтобы метод create() мог его использовать.
+        data['contact'] = contact
+        
         return data
 
-    
     def create(self, validated_data):
         """
         Создаем заказ, переносим товары из корзины и запускаем задачи.
         """
+
         from .tasks import send_order_confirmation_email, send_new_order_notification_to_admin
+        
         request = self.context['request']
         user = request.user
         cart = user.client_profile.cart
 
         with transaction.atomic():
-            # Извлекаем контакт из проверенных данных
             contact = validated_data['contact']
             
-            # Создаем объект Order вручную
             order = Order.objects.create(
                 client=user.client_profile,
                 contact=contact
             )
 
-            # Переносим товары
             for item in cart.items.all():
                 OrderItem.objects.create(
                     order=order,
@@ -194,14 +191,13 @@ class OrderSerializer(serializers.ModelSerializer):
                     price_per_item=item.product_info.price
                 )
             
-            # Очищаем корзину
             cart.items.all().delete()
 
-            # Запускаем асинхронные задачи
             send_order_confirmation_email.delay(order.id, user.email)
             send_new_order_notification_to_admin.delay(order.id)
             
             return order
+
 
 
 class ContactSerializer(serializers.ModelSerializer):
