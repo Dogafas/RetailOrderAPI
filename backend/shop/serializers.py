@@ -143,9 +143,15 @@ class OrderSerializer(serializers.ModelSerializer):
         """
         Проверяем, что корзина не пуста и контакт существует.
         """
-        cart = self.context['request'].user.client_profile.cart
+        request = self.context['request']
+
+        # Если корзина уже есть, она просто вернется. Если нет - создастся.
+        cart, _ = Cart.objects.get_or_create(client=request.user.client_profile)
+
+        # Теперь, когда мы уверены, что `cart` существует, мы можем проверить ее содержимое.
         if not cart.items.exists():
-            raise serializers.ValidationError("Нельзя оформить заказ с пустой корзиной.")        
+            raise serializers.ValidationError(
+                {'non_field_errors': ['Нельзя оформить заказ с пустой корзиной.']})
         
         contact_id = data.get('contact_id')
         request = self.context['request']
